@@ -29,12 +29,10 @@ namespace :load do
         primary(:db).hostname
       end
     end
-
   end
 end
 
 namespace :postgresql do
-
   desc 'Steps to upgrade the gem to version 4.0'
   task :upgrade4 do
     on roles :db do
@@ -104,6 +102,17 @@ namespace :postgresql do
     end
   end
 
+  desc 'Alter DB user role'
+  task :alter_db_user_role do
+    on roles :db do
+      next if db_user_exists? fetch(:pg_user)
+      unless psql '-c', %Q{"ALTER ROLE #{fetch(:pg_user)} SUPERUSER CREATEROLE CREATEDB REPLICATION;"}
+        error 'postgresql: altering database user role failed!'
+        exit 1
+      end
+    end
+  end
+
   desc 'Create database'
   task :create_database do
     on roles :db do
@@ -150,6 +159,7 @@ namespace :postgresql do
   desc 'Postgresql setup tasks'
   task :setup do
     invoke "postgresql:create_db_user"
+    invoke "postgresql:alter_db_user_role"
     invoke "postgresql:create_database"
     invoke 'postgresql:add_hstore'
     invoke 'postgresql:add_extensions'
